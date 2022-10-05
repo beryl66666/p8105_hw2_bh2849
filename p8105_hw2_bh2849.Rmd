@@ -79,10 +79,128 @@ trans_ent %>%
 ```
 
 
-
 ### Problem 2
 
+#### Read and clean the Mr. Trash Wheel sheet
+```{r}
+mrtrash_data = 
+  read_excel("./data/Trash Wheel Collection Data.xlsx",
+            sheet = "Mr. Trash Wheel",
+            range = "A2:N549") %>%
+  janitor::clean_names() %>%
+  drop_na(c(dumpster)) %>%
+  mutate(sports_balls = as.integer(round(sports_balls)),
+         dataset = "Mr")
+```
+
+
+#### Read and clean Professor Trash Wheel sheet 
+```{r}
+protrash_data = 
+  read_excel("./data/Trash Wheel Collection Data.xlsx",
+             sheet = "Professor Trash Wheel",
+             range = "A2:M96") %>%
+  janitor::clean_names() %>%
+  drop_na(c(dumpster)) %>%
+  mutate(dataset = "Pro")
+  
+```
+
+#### Combine Two Sheets
+
+```{r}
+mrtrash_data$year = as.numeric(mrtrash_data$year)
+protrash_data$year = as.numeric(protrash_data$year)
+
+trash_tidy = 
+  full_join(mrtrash_data,protrash_data )
+```
+
+#### About These Data
+
+* `trash-tidy` dataset is the combination of two excel sheets, there are 15 key variables, for example month, date, weight_tons, and glass_bottles. 
+* The data frame has **`r nrow(trash_tidy)`** rows and **`r ncol(trash_tidy)`** columns. 
+* The total weight of trash collected by Professor Trash Wheel is **`r sum(protrash_data$weight_tons)`** tons.
+* The total number of sports balls collected by Mr. Trash Wheel in 2020 is **`r mrtrash_data %>% filter(year == 2020) %>% pull(sports_balls) %>% sum`**.
+ 
 
 ### Problem 3
+
+#### Clean Data in pols-month.csv
+
+```{r}
+pols_data = 
+  read.csv("./Data/fivethirtyeight_datasets/pols-month.csv") %>%
+  janitor::clean_names() %>%
+  separate(mon, c("year","month","day")) %>%
+  mutate(year = as.integer(year),
+         day = as.integer(day),
+         month = as.integer(month),
+         month = month.name[month],
+         president = case_when(prez_dem == "1" ~ "dem", 
+                               prez_gop == "1" ~ "gop")) %>% 
+  select(-day, -prez_dem, -prez_gop)
+
+```
+
+#### Clean Data in snp.csv
+```{r}
+snp_data = 
+  read_csv("./Data/fivethirtyeight_datasets/snp.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(date = as.Date(date, "%m/%d/%y")) %>% 
+  separate(date, c("year","month", "day")) %>%
+  mutate(year = as.integer(year),
+         day = as.integer(day),
+         month = as.integer(month),
+         month = month.name[month]) %>%
+  arrange(year, month)
+
+```
+
+### Tidy the Unemployment Data 
+
+```{r}
+unemp_data = 
+  read_csv("./Data/fivethirtyeight_datasets/unemployment.csv") %>%
+  janitor::clean_names() %>% 
+  pivot_longer(jan:dec,
+               names_to = "month",
+               values_to = "percentage of unemployment") %>%
+  mutate(year = as.integer(year),
+         month = recode(month,
+                   jan = "Janurary",
+                   feb = "Feburary", 
+                   mar = "March", 
+                   apr = "April",
+                   may = "May",
+                   jun = "June",
+                   jul = "July",
+                   aug = "August",
+                   sep = "September",
+                   oct = "October",
+                   nov = "November",
+                   dec = "December")) 
+
+```
+
+#### Join the Datasets 
+
+```{r}
+join_data = 
+  left_join(pols_data, snp_data, by = c("year", "month")) %>%
+  left_join(unemp_data, by = c("year", "month"))
+```
+
+#### About These Datasets 
+
+* The `pols_data` dataset includes `r count(pols_data)` observations and `r ncol(pols_data)` variables, the following variables: `r names(pols_data)`. 
+* The `snp_data` dataset includes `r count(snp_data)` observations and `r ncol(snp_data)` variables, the following variables: `r names(snp_data)`.
+* Tthe `unemp_data` dataset includes `r count(unemp_data)` observations and `r ncol(unemp_data)` variables, the following variables: `r names(unemp_data)`.
+
+* The joined dataset, `join_data`, includes `r count(join_data)` observations and `r ncol(join_data)` variables. 
+The dimension of the joined dataset is `r dim(join_data)`. 
+The range of years is between `r min(join_data$year)` and `r max(join_data$year)`. 
+There are key variables in the dataset like `president`, `unemployment_rate`, and `close`. 
 
 
